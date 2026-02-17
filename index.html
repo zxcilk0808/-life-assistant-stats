@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Life Assistant Stats</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+        .container { max-width: 400px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 20px; animation: fadeInDown 0.6s ease; }
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00d9ff 0%, #00ff88 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        .header p { color: #6b7280; font-size: 14px; }
+        .user-info {
+            text-align: center;
+            padding: 12px;
+            background: rgba(0, 217, 255, 0.1);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            animation: fadeIn 0.8s ease 0.2s both;
+        }
+        .user-info span { color: #00d9ff; font-size: 14px; }
+        .profile-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
+            border-radius: 24px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.12);
+            animation: fadeInUp 0.6s ease 0.3s both;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .level-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .level-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+        }
+        .level-reward {
+            font-size: 12px;
+            color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+            padding: 6px 12px;
+            border-radius: 10px;
+        }
+        .xp-section { margin-bottom: 15px; }
+        .xp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .xp-label { font-size: 14px; color: #9ca3af; }
+        .xp-value { font-size: 18px; font-weight: 700; color: #00ff88; }
+        .xp-bar-container {
+            background: rgba(255,255,255,0.08);
+            border-radius: 12px;
+            height: 14px;
+            overflow: hidden;
+            position: relative;
+        }
+        .xp-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d9ff 0%, #00ff88 100%);
+            border-radius: 12px;
+            transition: width 1s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .xp-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .xp-details { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; }
+        .xp-percent { color: #00ff88; font-weight: 600; }
+        .xp-next { color: #6b7280; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+            border-radius: 18px;
+            padding: 18px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            animation: fadeIn 0.6s ease both;
+        }
+        .stat-card:nth-child(1) { animation-delay: 0.4s; }
+        .stat-card:nth-child(2) { animation-delay: 0.5s; }
+        .stat-card:nth-child(3) { animation-delay: 0.6s; }
+        .stat-card:nth-child(4) { animation-delay: 0.7s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .stat-card:active { transform: scale(0.96); background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 100%); }
+        .stat-card:hover { border-color: rgba(0, 217, 255, 0.3); box-shadow: 0 0 20px rgba(0, 217, 255, 0.2); }
+        .stat-icon { font-size: 32px; margin-bottom: 10px; }
+        .stat-value { font-size: 26px; font-weight: 700; margin-bottom: 5px; }
+        .stat-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+        .daily-xp-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(99, 102, 241, 0.05) 100%);
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            animation: fadeInUp 0.6s ease 0.5s both;
+        }
+        .daily-xp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .daily-xp-title { font-size: 14px; font-weight: 600; color: #e5e7eb; }
+        .daily-xp-limit { font-size: 12px; color: #6b7280; }
+        .daily-xp-bar { background: rgba(255,255,255,0.08); border-radius: 10px; height: 10px; overflow: hidden; }
+        .daily-xp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 10px;
+            transition: width 1s ease;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+        .progress-section {
+            background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+            border-radius: 20px;
+            padding: 22px;
+            border: 1px solid rgba(255,255,255,0.08);
+            animation: fadeInUp 0.6s ease 0.6s both;
+        }
+        .progress-title { font-size: 15px; font-weight: 600; margin-bottom: 18px; color: #e5e7eb; display: flex; align-items: center; gap: 8px; }
+        .progress-item { margin-bottom: 18px; }
+        .progress-item:last-child { margin-bottom: 0; }
+        .progress-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .progress-item-name { font-size: 13px; color: #9ca3af; display: flex; align-items: center; gap: 6px; }
+        .progress-item-value { font-size: 13px; font-weight: 600; color: #00ff88; }
+        .mini-progress-bar { background: rgba(255,255,255,0.06); border-radius: 8px; height: 8px; overflow: hidden; }
+        .mini-progress-fill { height: 100%; border-radius: 8px; transition: width 1s ease; }
+        .fill-blue { background: linear-gradient(90deg, #00d9ff, #0099ff); box-shadow: 0 0 10px rgba(0, 217, 255, 0.5); }
+        .fill-green { background: linear-gradient(90deg, #00ff88, #00cc6a); box-shadow: 0 0 10px rgba(0, 255, 136, 0.5); }
+        .fill-purple { background: linear-gradient(90deg, #a855f7, #7c3aed); box-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+        .fill-orange { background: linear-gradient(90deg, #f97316, #ea580c); box-shadow: 0 0 10px rgba(249, 115, 22, 0.5); }
+        .achievements { margin-top: 20px; animation: fadeInUp 0.6s ease 0.7s both; }
+        .achievements-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #e5e7eb; }
+        .achievements-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .achievement-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+            border-radius: 12px;
+            padding: 8px 14px;
+            font-size: 12px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .achievement-badge:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); }
+        .achievement-icon { font-size: 16px; }
+        .loading { text-align: center; padding: 50px 20px; color: #6b7280; }
+        .loading-spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(0, 217, 255, 0.1);
+            border-top-color: #00d9ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            color: #f87171;
+            margin: 20px 0;
+        }
+        .action-buttons {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 15px 20px;
+            background: rgba(15, 15, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-primary {
+            background: linear-gradient(135deg, #00d9ff 0%, #0099ff 100%);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(0, 217, 255, 0.3);
+        }
+        .btn-primary:hover { box-shadow: 0 6px 20px rgba(0, 217, 255, 0.4); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
+            padding: 25px;
+            max-width: 350px;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.1);
+            animation: modalIn 0.3s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 15px; color: #fff; }
+        .modal-text { font-size: 14px; color: #9ca3af; margin-bottom: 20px; line-height: 1.5; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; }
+        .stat-detail {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stat-detail-label { color: #9ca3af; font-size: 13px; }
+        .stat-detail-value { color: #00ff88; font-weight: 600; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Life Assistant</h1>
+            <p>Твоя статистика</p>
+        </div>
+
+        <div class="user-info" id="user-info">
+            <span id="user-greeting">👋 Загрузка...</span>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="loading-spinner"></div>
+            <p>Загрузка статистики...</p>
+        </div>
+
+        <div id="error-box" class="error-box" style="display:none;">
+            <p>⚠️ Не удалось загрузить данные</p>
+            <p style="font-size:12px;margin-top:8px;">Нажмите "Обновить" для повторной попытки</p>
+        </div>
+
+        <div id="stats-content" style="display:none;">
+            <!-- Profile Card -->
+            <div class="profile-card">
+                <div class="level-header">
+                    <div class="level-badge">
+                        ⚡ <span id="level-text">Уровень 1</span>
+                    </div>
+                    <div class="level-reward" id="reward-text">Новичок</div>
+                </div>
+                <div class="xp-section">
+                    <div class="xp-header">
+                        <span class="xp-label">⭐ Опыт</span>
+                        <span class="xp-value" id="xp-text">0 / 100</span>
+                    </div>
+                    <div class="xp-bar-container">
+                        <div class="xp-bar-fill" id="xp-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="xp-details">
+                        <span class="xp-percent" id="xp-percent">0%</span>
+                        <span class="xp-next">до след. уровня</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daily XP Card -->
+            <div class="daily-xp-card">
+                <div class="daily-xp-header">
+                    <span class="daily-xp-title">💫 XP сегодня</span>
+                    <span class="daily-xp-limit" id="daily-xp-limit">0 / 500</span>
+                </div>
+                <div class="daily-xp-bar">
+                    <div class="daily-xp-fill" id="daily-xp-bar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card" onclick="showStatDetail('reminders')">
+                    <div class="stat-icon">📅</div>
+                    <div class="stat-value" id="reminders-count">0</div>
+                    <div class="stat-label">Напоминания</div>
+                </div>
+                <div class="stat-card" onclick="showStatDetail('completed')">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value" id="completed-count">0</div>
+                    <div class="stat-label">Выполнено</div>
+                </div>
+                <div class="stat-card" onclick="showStatDetail('notes')">
+                    <div class="stat-icon">📝</div>
+                    <div class="stat-value" id="notes-count">0</div>
+                    <div class="stat-label">Заметки</div>
+                </div>
+                <div class="stat-card" onclick="showStatDetail('streak')">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-value" id="streak-count">0</div>
+                    <div class="stat-label">Серия</div>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="progress-section">
+                <div class="progress-title">📈 Прогресс</div>
+                <div class="progress-item">
+                    <div class="progress-item-header">
+                        <span class="progress-item-name">📅 Напоминания</span>
+                        <span class="progress-item-value" id="reminder-progress-text">0 / 0</span>
+                    </div>
+                    <div class="mini-progress-bar">
+                        <div class="mini-progress-fill fill-blue" id="reminder-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-item-header">
+                        <span class="progress-item-name">✅ Привычки</span>
+                        <span class="progress-item-value" id="habit-progress-text">0 прив.</span>
+                    </div>
+                    <div class="mini-progress-bar">
+                        <div class="mini-progress-fill fill-purple" id="habit-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-item-header">
+                        <span class="progress-item-name">💫 XP сегодня</span>
+                        <span class="progress-item-value" id="activity-text">0%</span>
+                    </div>
+                    <div class="mini-progress-bar">
+                        <div class="mini-progress-fill fill-orange" id="activity-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Achievements -->
+            <div class="achievements">
+                <div class="achievements-title">🏆 Достижения</div>
+                <div class="achievements-grid" id="achievements-list">
+                    <!-- Динамически заполняется -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons" id="action-buttons" style="display:none;">
+        <button class="btn btn-secondary" onclick="refreshStats()">
+            🔄 Обновить
+        </button>
+        <button class="btn btn-primary" onclick="closeApp()">
+            ✕ Закрыть
+        </button>
+    </div>
+
+    <!-- Modal for stat details -->
+    <div class="modal" id="stat-modal" onclick="closeModal(event)">
+        <div class="modal-content">
+            <div class="modal-title" id="modal-title">📊 Детали</div>
+            <div class="modal-text" id="modal-text">Загрузка...</div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeModalBtn()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        tg.MainButton.hide();
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            tg.close();
+        });
+
+        // Получение данных пользователя
+        const user = tg.initDataUnsafe?.user;
+        const userId = user?.id || null;
+        const username = user?.username || user?.first_name || 'Пользователь';
+        const firstName = user?.first_name || '';
+
+        // Обновление приветствия
+        document.getElementById('user-greeting').textContent = `👋 Привет, ${firstName}!`;
+
+        // Демо-данные (резерв, если нет подключения к API)
+        let statsData = {
+            level: 1,
+            xp: 0,
+            nextLevelXp: 100,
+            progressPercent: 0,
+            reward: 'Новичок',
+            dailyXp: 0,
+            dailyLimit: 500,
+            reminders: 0,
+            completedReminders: 0,
+            notes: 0,
+            streak: 0,
+            habits: 0
+        };
+
+        // URL API для получения данных (замени на свой при деплое)
+        const API_URL = '/api/stats';
+
+        // Загрузка реальных данных из API
+        async function loadRealStats() {
+            try {
+                // Пытаемся получить данные через API
+                const response = await fetch(`${API_URL}/${userId}?t=${Date.now()}`);
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    statsData = result.data;
+                    updateUI(statsData);
+                } else {
+                    // Если API не доступен - показываем демо
+                    console.log('API недоступно, показываем демо-данные');
+                    showDemoData();
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                // Если ошибка - показываем демо
+                showDemoData();
+            }
+        }
+
+        // Показ демо-данных
+        function showDemoData() {
+            statsData = {
+                level: 5,
+                xp: 450,
+                nextLevelXp: 900,
+                progressPercent: 50,
+                reward: 'Опытный',
+                dailyXp: 150,
+                dailyLimit: 500,
+                reminders: 12,
+                completedReminders: 8,
+                notes: 24,
+                streak: 7,
+                habits: 5
+            };
+            updateUI(statsData);
+        }
+
+        // Обновление UI
+        function updateUI(data) {
+            // Level
+            document.getElementById('level-text').textContent = `Уровень ${data.level}`;
+            document.getElementById('reward-text').textContent = data.reward;
+            
+            // XP
+            document.getElementById('xp-text').textContent = `${data.xp} / ${data.nextLevelXp}`;
+            document.getElementById('xp-bar').style.width = `${data.progressPercent}%`;
+            document.getElementById('xp-percent').textContent = `${data.progressPercent.toFixed(1)}%`;
+            
+            // Daily XP
+            document.getElementById('daily-xp-limit').textContent = `${data.dailyXp} / ${data.dailyLimit}`;
+            document.getElementById('daily-xp-bar').style.width = `${Math.min(100, (data.dailyXp / data.dailyLimit * 100)).toFixed(1)}%`;
+            
+            // Stats
+            document.getElementById('reminders-count').textContent = data.reminders;
+            document.getElementById('completed-count').textContent = data.completedReminders;
+            document.getElementById('notes-count').textContent = data.notes;
+            document.getElementById('streak-count').textContent = data.streak;
+            
+            // Progress
+            const reminderPercent = data.reminders > 0 ? (data.completedReminders / data.reminders * 100) : 0;
+            document.getElementById('reminder-progress-text').textContent = `${data.completedReminders} / ${data.reminders}`;
+            document.getElementById('reminder-progress').style.width = `${reminderPercent}%`;
+            
+            document.getElementById('habit-progress-text').textContent = `${data.habits} прив.`;
+            const habitPercent = data.habits > 0 ? Math.min(100, (data.habits / 10 * 100)) : 0;
+            document.getElementById('habit-progress').style.width = `${habitPercent}%`;
+            
+            const activityPercent = Math.min(100, (data.dailyXp / data.dailyLimit * 100));
+            document.getElementById('activity-text').textContent = `${activityPercent.toFixed(0)}%`;
+            document.getElementById('activity-progress').style.width = `${activityPercent}%`;
+            
+            // Achievements
+            updateAchievements(data);
+            
+            // Показать контент
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('stats-content').style.display = 'block';
+            document.getElementById('action-buttons').style.display = 'flex';
+            document.getElementById('error-box').style.display = 'none';
+        }
+
+        // Обновление достижений
+        function updateAchievements(data) {
+            const achievements = [];
+            
+            if (data.reminders > 0) achievements.push({ icon: '📅', name: 'Первое напоминание' });
+            if (data.reminders >= 10) achievements.push({ icon: '📋', name: '10 напоминаний' });
+            if (data.completedReminders >= 5) achievements.push({ icon: '✅', name: 'Выполнено 5' });
+            if (data.completedReminders >= 20) achievements.push({ icon: '🎯', name: 'Мастер напоминаний' });
+            if (data.notes > 0) achievements.push({ icon: '📝', name: 'Первая заметка' });
+            if (data.notes >= 20) achievements.push({ icon: '📚', name: '20 заметок' });
+            if (data.streak >= 3) achievements.push({ icon: '🔥', name: '3 дня подряд' });
+            if (data.streak >= 7) achievements.push({ icon: '⚡', name: 'Неделя без перерыва' });
+            if (data.streak >= 30) achievements.push({ icon: '💪', name: 'Месяц подряд' });
+            if (data.level >= 5) achievements.push({ icon: '⭐', name: 'Уровень 5' });
+            if (data.level >= 10) achievements.push({ icon: '👑', name: 'Легенда' });
+            if (data.dailyXp >= 500) achievements.push({ icon: '💫', name: 'Максимум XP' });
+            
+            const container = document.getElementById('achievements-list');
+            if (achievements.length === 0) {
+                container.innerHTML = '<div style="color:#6b7280;font-size:13px;">Пока нет достижений. Продолжай пользоваться ботом!</div>';
+            } else {
+                container.innerHTML = achievements.map(a => 
+                    `<div class="achievement-badge" onclick="showAchievementDetail('${a.name}')">
+                        <span class="achievement-icon">${a.icon}</span>
+                        <span>${a.name}</span>
+                    </div>`
+                ).join('');
+            }
+        }
+
+        // Показать детали статистики
+        function showStatDetail(type) {
+            const modal = document.getElementById('stat-modal');
+            const title = document.getElementById('modal-title');
+            const text = document.getElementById('modal-text');
+            
+            let details = '';
+            
+            switch(type) {
+                case 'reminders':
+                    title.textContent = '📅 Напоминания';
+                    const reminderPercent = statsData.reminders > 0 ? (statsData.completedReminders / statsData.reminders * 100) : 0;
+                    details = `
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">Всего создано</span>
+                            <span class="stat-detail-value">${statsData.reminders}</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">Выполнено</span>
+                            <span class="stat-detail-value">${statsData.completedReminders}</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">Процент выполнения</span>
+                            <span class="stat-detail-value">${reminderPercent.toFixed(1)}%</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">Ожидают</span>
+                            <span class="stat-detail-value">${statsData.reminders - statsData.completedReminders}</span>
+                        </div>
+                    `;
+                    break;
+                case 'completed':
+                    title.textContent = '✅ Выполнено';
+                    details = `
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">Выполнено напоминаний</span>
+                            <span class="stat-detail-value">${statsData.completedReminders}</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">Текущая серия</span>
+                            <span class="stat-detail-value">${statsData.streak} дн.</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">Привычек выполнено</span>
+                            <span class="stat-detail-value">${statsData.habits}</span>
+                        </div>
+                    `;
+                    break;
+                case 'notes':
+                    title.textContent = '📝 Заметки';
+                    details = `
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">Всего заметок</span>
+                            <span class="stat-detail-value">${statsData.notes}</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">Закреплено</span>
+                            <span class="stat-detail-value">0</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">В среднем в день</span>
+                            <span class="stat-detail-value">${(statsData.notes / 7).toFixed(1)}</span>
+                        </div>
+                    `;
+                    break;
+                case 'streak':
+                    title.textContent = '🔥 Серия';
+                    details = `
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">Текущая серия</span>
+                            <span class="stat-detail-value">${statsData.streak} дн.</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">Привычек активно</span>
+                            <span class="stat-detail-value">${statsData.habits}</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="stat-detail-label">До следующей награды</span>
+                            <span class="stat-detail-value">${Math.max(0, 7 - statsData.streak)} дн.</span>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            text.innerHTML = details;
+            modal.classList.add('active');
+        }
+
+        // Показать детали достижения
+        function showAchievementDetail(name) {
+            const modal = document.getElementById('stat-modal');
+            const title = document.getElementById('modal-title');
+            const text = document.getElementById('modal-text');
+            
+            title.textContent = '🏆 Достижение';
+            text.textContent = `Поздравляем! Вы получили достижение "${name}". Продолжайте в том же духе!`;
+            modal.classList.add('active');
+        }
+
+        // Закрыть модальное окно
+        function closeModal(event) {
+            if (event.target === event.currentTarget) {
+                document.getElementById('stat-modal').classList.remove('active');
+            }
+        }
+
+        function closeModalBtn() {
+            document.getElementById('stat-modal').classList.remove('active');
+        }
+
+        // Обновить статистику
+        function refreshStats() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('stats-content').style.display = 'none';
+            document.getElementById('action-buttons').style.display = 'none';
+            
+            // Загружаем реальные данные из API
+            loadRealStats();
+        }
+
+        // Закрыть приложение
+        function closeApp() {
+            tg.close();
+        }
+
+        // Обработка данных от бота
+        tg.onEvent('mainButtonClicked', function() {
+            refreshStats();
+        });
+
+        // Загрузка при старте
+        loadRealStats();
+
+        // Настройка цветов темы
+        if (tg.themeParams) {
+            document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#0f0f1a');
+            document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#ffffff');
+        }
+    </script>
+</body>
+</html>

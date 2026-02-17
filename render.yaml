@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: life-assistant-stats
+    env: python
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python web_server.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    healthCheckPath: /api/stats/1008899505
